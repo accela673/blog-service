@@ -1,11 +1,14 @@
-import { Body, Controller, Post, UsePipes, ValidationPipe, Get, Delete, Param, Patch } from '@nestjs/common';
+import { Body, Controller, Post, UsePipes, ValidationPipe, Get, Param, Delete, Patch, Put, UseGuards, Request, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/users.dto';
 import * as bcrypt from 'bcrypt';
-import { ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger';
+import { UpdateUserDto } from './dto/update.dto';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guards';
 
 
-@ApiTags("Registration and login")
+@ApiTags("Users(Profiles) endpoints")
 @Controller('auth')
 export class UsersController {
     constructor(private readonly usersService: UsersService) {}
@@ -13,30 +16,74 @@ export class UsersController {
 
     @UsePipes(new ValidationPipe())
     @Post('/registration')
-    async postUser(@Body() user: CreateUserDto): Promise<CreateUserDto> {
-        let {username, password} = user
-        const hashedPassword = await bcrypt.hash(password, 8);
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        schema: {
+          type: 'object',
+          properties: {
+            username: { type: 'string' },
+            password: { type: 'string' },
+            user_pfp: {
+              type: 'string',
+              format: 'binary'
+            },
+          },
+        },
+      })
+    @UseInterceptors(FileInterceptor('user_pfp'))
+    async createUser(@Request() req, @UploadedFile() image) {
+        const user = new CreateUserDto()
+        const hashedPassword = await bcrypt.hash(req.body.password, 8);
+        user.user_pfp = image.filename
+        user.username = req.body.username
         user.password = hashedPassword
         return await this.usersService.createUser(user)
     }
 
-    @Get()
+    @Get('/users')
     async getUsers(){
         return await this.usersService.findUsers()
     }
 
-    @Get(':id')
+    @Get('/users/:id')
     async getUserByID(@Param('id') id: string){
         return await this.usersService.findOne(+id)
     }
 
-    @Delete(':id')
-    async deleteUserByID(@Param('id') id: string){
-        return await this.usersService.deleteOne(+id)
+    @ApiBearerAuth()
+    @ApiUnauthorizedResponse()
+    @UseGuards(JwtAuthGuard)
+    @Delete('/delete')
+    async deleteUserByID(@Request() req){
+        return await this.usersService.delete(req.user.userId, req.user.username)
     }
 
-    @Patch('id')
-    async patchUserByID(@Param('id') id: string, @Body() updateUser: CreateUserDto){
-        return await this.usersService.editOne(+id, updateUser)
+
+    @ApiBearerAuth()
+    @ApiUnauthorizedResponse()
+    @UseGuards(JwtAuthGuard)
+    @Put('/update')
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        schema: {
+          type: 'object',
+          properties: {
+            username: { type: 'string' },
+            password: { type: 'string' },
+            new_pfp: {
+              type: 'string',
+              format: 'binary'
+            },
+          },
+        },
+      })
+    @UseInterceptors(FileInterceptor('user_pfp'))
+    async patchUserByID(@Request() req){
+        const newUser = new UpdateUserDto()
+        const hashedPassword = await bcrypt.hash(req.body.password, 8);
+        newUser.new_pfp = req.body.new_pfp;
+        newUser.username = req.body.username;
+        newUser.password = hashedPassword
+        return await this.usersService.editOne(req.user.userId, newUser)
     }
 }

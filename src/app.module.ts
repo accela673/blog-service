@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PostsModule } from './posts/posts.module'; 
-import { RentModule } from './rent/rent.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 
@@ -19,7 +18,9 @@ import { UsersModule } from './users/users.module';
     database: process.env.DB_NAME,
     entities: ["dist/**/*.entity{.ts,.js}"],
     synchronize: true,
-  }), PostsModule, RentModule, AuthModule, UsersModule, PostsModule],
+    autoLoadEntities: true,
+  }), 
+  PostsModule, AuthModule, UsersModule ],
   controllers: [],
   providers: [],
 })
