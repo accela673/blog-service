@@ -41,7 +41,7 @@ export class UsersService {
     async editOne(id: number ,newUser: UpdateUserDto){        
         const user = await this.userRepo.findOne({where:{user_id:id}})
         Object.assign(user, newUser)
-        return this.userRepo.save(user)
+        return await this.userRepo.save(user)
     }
 
 

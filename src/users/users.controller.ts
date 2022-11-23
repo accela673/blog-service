@@ -8,12 +8,12 @@ import { UpdateUserDto } from './dto/update.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guards';
 
 
-@ApiTags("Users(Profiles) endpoints")
+
 @Controller('auth')
 export class UsersController {
     constructor(private readonly usersService: UsersService) {}
 
-
+    @ApiTags("Registration and login")
     @UsePipes(new ValidationPipe())
     @Post('/registration')
     @ApiConsumes('multipart/form-data')
@@ -40,25 +40,7 @@ export class UsersController {
         return await this.usersService.createUser(user)
     }
 
-    @Get('/users')
-    async getUsers(){
-        return await this.usersService.findUsers()
-    }
-
-    @Get('/users/:id')
-    async getUserByID(@Param('id') id: string){
-        return await this.usersService.findOne(+id)
-    }
-
-    @ApiBearerAuth()
-    @ApiUnauthorizedResponse()
-    @UseGuards(JwtAuthGuard)
-    @Delete('/delete')
-    async deleteUserByID(@Request() req){
-        return await this.usersService.delete(req.user.userId, req.user.username)
-    }
-
-
+    @ApiTags("Delete and update logined user")
     @ApiBearerAuth()
     @ApiUnauthorizedResponse()
     @UseGuards(JwtAuthGuard)
@@ -85,5 +67,30 @@ export class UsersController {
         newUser.username = req.body.username;
         newUser.password = hashedPassword
         return await this.usersService.editOne(req.user.userId, newUser)
+      }
+      
+      @ApiTags("Delete and update logined user")
+      @ApiBearerAuth()
+      @ApiUnauthorizedResponse()
+      @UseGuards(JwtAuthGuard)
+      @Delete('/delete')
+      async deleteUserByID(@Request() req){
+          return await this.usersService.delete(req.user.userId, req.user.username)
+      }
+
+    @ApiTags("Users(Profiles) endpoints")
+    @Get('/users')
+    async getUsers(){
+        return await this.usersService.findUsers()
+      }
+
+    @ApiTags("Users(Profiles) endpoints")
+    @Get('/users/:id')
+    async getUserByID(@Param('id') id: string){
+        return await this.usersService.findOne(+id)
     }
+
+
+
+
 }
